@@ -1,0 +1,1 @@
+Load cleaned_data.csv into Power BI and build charts.
