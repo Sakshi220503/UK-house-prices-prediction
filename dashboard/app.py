@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import pickle
 
 # Page config
 st.set_page_config(page_title="UK Housing Dashboard", layout="wide")
@@ -11,7 +12,8 @@ data_path = os.path.join(BASE_DIR, "data/processed/cleaned_data.csv")
 df = pd.read_csv(data_path)
 
 df["Date"] = pd.to_datetime(df["Date"])
-
+with open("models/price_model.pkl", "rb") as f:
+    model = pickle.load(f)
 # =========================
 # SIDEBAR (Filters)
 # =========================
@@ -92,3 +94,26 @@ st.write("""
 - Rapid growth observed post-2020
 - New properties generally priced higher than older ones
 """)
+st.markdown("---")
+st.subheader("🤖 Predict Future House Prices")
+future_year = st.slider("Select future year", 2025, 2035)
+
+# Calculate average annual growth rate from last 10 years of data
+recent = df[df["year"] >= df["year"].max() - 10]
+avg_growth = recent["price_all"].pct_change().mean()
+
+# Last known average price and year
+last_price = df["price_all"].dropna().iloc[-1]
+last_year  = int(df["year"].dropna().iloc[-1])
+
+# Project forward
+years_ahead    = future_year - last_year
+predicted_price = last_price * ((1 + avg_growth) ** years_ahead)
+
+st.metric(
+    f"Predicted Average UK House Price in {future_year}",
+    f"£{int(predicted_price):,}",
+    delta=f"{((predicted_price - last_price) / last_price * 100):.1f}% from {last_year}"
+)
+
+st.caption(f"Based on {avg_growth*100:.2f}% average annual growth rate (last 10 years of data)")
